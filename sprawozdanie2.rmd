@@ -1,30 +1,70 @@
 ---
 title: "Sprawozdanie 2"
 author: "Kaludia Jaworek, Martyna Bielec"
-date: '2023-02-06'
-output: pdf_document
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+    extra_dependencies: ["polski", "float"]
+  word_document: default
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+knitr::knit_engines$set(python = reticulate::eng_python)
+knitr::opts_chunk$set(pythonreticulate = FALSE)
 ```
 
-## R Markdown
+```{python include = FALSE}
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+import numpy as np
+from scipy import stats
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+sns.set_style("darkgrid")
+sns.set_palette(["steelblue", "red"]) 
 ```
 
-## Including Plots
+## Wstęp
 
-You can also embed plots, for example:
+Dane, które poddamy analizie, dotyczą pogody w Londynie w latach 1979-2020. Pomiary były dokonywane codziennie w stacji pogodowej w pobliżu lotniska Heathrow. Zawierają informacje dotyczące m.in. zachmurzenia, nasłonecznienia, ciśnienia oraz temperatury. W sprawozdaniu zajmiemy się analizą maksymalnej temperatury. Sprawdzimy trend deterministyczny i dokonamy dekompozycji, a następnie sprawdzimy jaki szereg czasowy najlepiej modeluje zachowanie danych.
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
+ 
+```{python echo = FALSE, fig.cap = "\\label{fig:wykres bez obrobki}Maksymalna temperatura w Londynie.", fig.pos = "H"}
+
+weather_data = pd.read_csv("london_weather.csv")
+max_temp_data = weather_data["max_temp"]
+date_data = weather_data["date"]
+correct_date = [pd.to_datetime(str(date), format='%Y%m%d') for date in date_data]
+weather_data["correct_date"] = correct_date
+plt.plot(correct_date, max_temp_data)
+plt.xlabel("Czas")
+plt.ylabel("Maksymalna temperatura")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Z wykresu [\ref{wykres bez obrobki}] odczytujemy, że obserwowane wartości wykazują się sezonowością, zgodnie z oczekiwaniami. 
+
+
+
+## Przygotowanie danych do analizy
+
+### Wartości brakujące i obserwacje odstające.
+
+W danych znajduje się sześć dni, dla których nie zmierzono maksymalnej temperatury. Są to: 05.02, 10.03, 06.05, 16.07, 10.08 oraz 08.10 z 2020 roku. Z tego powodu weźmiemy pod uwagę jedynie dane sprzed 2020 roku. 
+
+Najwyższa zaobserwowana temperatura wyniosła $37.9 ^\circ$, a najniższa $-6.2^\circ$. Wartości są wiarygodne, skąd wnioskujemy, że dane nie zawierają błędów w pomiarach.
+
+### Dekompozycja szeregu czasowego
+
+#### ACF oraz PACF dla surowych danych
+
+
+
+
+
+
+
+
