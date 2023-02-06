@@ -25,15 +25,34 @@ from scipy import stats
 
 sns.set_style("darkgrid")
 sns.set_palette(["steelblue", "red"]) 
+
+def autocovariance_estimator(data, h):
+    n = len(data)
+    h = np.abs(h)
+    new_first_data = data[h:]
+    new_second_data = data[:n-h]
+    mean_data = np.mean(data)
+    
+    output = (1/n)*sum((new_first_data - mean_data)*(new_second_data - mean_data))
+    
+    return output
+
+def autocorrelation_estimator(data, h):
+  
+    data = np.array(data)
+    autocovariance = autocovariance_estimator(data, h)
+    variance = autocovariance_estimator(data, 0)
+    
+    return autocovariance/variance
 ```
 
 ## Wstęp
 
-Dane, które poddamy analizie, dotyczą pogody w Londynie w latach 1979-2020. Pomiary były dokonywane codziennie w stacji pogodowej w pobliżu lotniska Heathrow. Zawierają informacje dotyczące m.in. zachmurzenia, nasłonecznienia, ciśnienia oraz temperatury. W sprawozdaniu zajmiemy się analizą maksymalnej temperatury. Sprawdzimy trend deterministyczny i dokonamy dekompozycji, a następnie sprawdzimy jaki szereg czasowy najlepiej modeluje zachowanie danych.
+Dane, które poddamy analizie, dotyczą pogody w Londynie w latach 1979-2020. Pomiary były dokonywane codziennie w stacji pogodowej w pobliżu lotniska Heathrow. Zawierają informacje dotyczące m.in. zachmurzenia, nasłonecznienia, ciśnienia oraz temperatury. W sprawozdaniu zajmiemy się analizą maksymalnej temperatury. Sprawdzimy trend deterministyczny i dokonamy dekompozycji, a następnie sprawdzimy jaki szereg czasowy najlepiej modeluje zachowanie danych. Szereg będziemy oznaczać jako $\{X_t\}$.
 
 
  
-```{python echo = FALSE, fig.cap = "\\label{fig:wykres bez obrobki}Maksymalna temperatura w Londynie.", fig.pos = "H"}
+```{python echo = FALSE, fig.cap = "\\label{wykres bez obrobki}Maksymalna temperatura w Londynie.", fig.pos = "H"}
 
 weather_data = pd.read_csv("london_weather.csv")
 max_temp_data = weather_data["max_temp"]
@@ -55,15 +74,48 @@ Z wykresu [\ref{wykres bez obrobki}] odczytujemy, że obserwowane wartości wyka
 
 W danych znajduje się sześć dni, dla których nie zmierzono maksymalnej temperatury. Są to: 05.02, 10.03, 06.05, 16.07, 10.08 oraz 08.10 z 2020 roku. Z tego powodu weźmiemy pod uwagę jedynie dane sprzed 2020 roku. 
 
+```{python include = FALSE}
+
+max_temp_data = max_temp_data[:-365]
+correct_date = correct_date[:-365]
+```
+
 Najwyższa zaobserwowana temperatura wyniosła $37.9 ^\circ$, a najniższa $-6.2^\circ$. Wartości są wiarygodne, skąd wnioskujemy, że dane nie zawierają błędów w pomiarach.
 
 ### Dekompozycja szeregu czasowego
 
 #### ACF oraz PACF dla surowych danych
 
+ACF jest funkcją korelacji między dwoma obserwacjami z szeregu $\{X_t\}$, oddalonymi o $h$, gdzie $h \in \mathbf{Z}$, czyli $\mathrm{corr}(X_t, X_{t+h})$. Estymuje się ją w natępujący sposób:
 
+$$\hat{\rho}(h) = \frac{\hat{\gamma}(h)}{\hat{\gamma}(0)},$$
+gdzie $\hat{\gamma}(h)$ jest empiryczną funkcją autokowariancji, wyrażoną wzorem
 
+$$\hat{\gamma}(h) = \frac{1}{n} \sum_{t=1}^{n - |h|} (x_{t+|h|} - \overline{x})(x_t - \overline{x}),$$
 
+gdzie $x_1, x_2, \dots, x_n$ są realizacjami szeregu czasowego $X_t$, a $\overline{x} = \frac{1}{n}\sum_{i=1}^n x_i$.
+
+Obliczamy ACF dla badanego szeregu czasowego, dla $h=0, 1, 2, \dots 20$.
+
+```{python echo = FALSE, fig.cap = "\\label{fig:ACF bez obrobki}ACF dla surowych danych dla $h < 21$.", fig.pos = "H"}
+
+H_20 = np.arange(21)
+autocorr_20 = [autocorrelation_estimator(max_temp_data, h) for h in H_20]
+
+plt.plot(H_20, autocorr_20)
+plt.xlabel("$h$")
+plt.ylabel("ACF")
+```
+
+```{python echo = FALSE, fig.cap = "\\label{fig:ACF bez obrobki}ACF dla surowych danych dla $h < 1001$.", fig.pos = "H"}
+
+H_1000 = np.arange(1001)
+autocorr_1000 = [autocorrelation_estimator(max_temp_data, h) for h in H_1000]
+
+plt.plot(H_1000, autocorr_1000)
+plt.xlabel("$h$")
+plt.ylabel("ACF")
+```
 
 
 
