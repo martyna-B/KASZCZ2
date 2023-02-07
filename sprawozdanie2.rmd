@@ -22,6 +22,7 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 from scipy import stats
+from statsmodels.tsa.stattools import pacf
 
 sns.set_style("darkgrid")
 sns.set_palette(["steelblue", "red"]) 
@@ -97,7 +98,7 @@ gdzie $x_1, x_2, \dots, x_n$ są realizacjami szeregu czasowego $X_t$, a $\overl
 
 Obliczamy ACF dla badanego szeregu czasowego, dla $h=0, 1, 2, \dots 20$.
 
-```{python echo = FALSE, fig.cap = "\\label{fig:ACF bez obrobki}ACF dla surowych danych dla $h < 21$.", fig.pos = "H"}
+```{python echo = FALSE, fig.cap = "\\label{fig:ACF bez obrobki 20}ACF dla surowych danych dla $h < 21$.", fig.pos = "H"}
 
 H_20 = np.arange(21)
 autocorr_20 = [autocorrelation_estimator(max_temp_data, h) for h in H_20]
@@ -107,7 +108,11 @@ plt.xlabel("$h$")
 plt.ylabel("ACF")
 ```
 
-```{python echo = FALSE, fig.cap = "\\label{fig:ACF bez obrobki}ACF dla surowych danych dla $h < 1001$.", fig.pos = "H"}
+
+
+```{python echo = FALSE, fig.cap = "\\label{fig:ACF bez obrobki 1000}ACF dla surowych danych dla $h < 1001$.", fig.pos = "H"}
+
+#to pewnie się usunie
 
 H_1000 = np.arange(1001)
 autocorr_1000 = [autocorrelation_estimator(max_temp_data, h) for h in H_1000]
@@ -117,6 +122,25 @@ plt.xlabel("$h$")
 plt.ylabel("ACF")
 ```
 
+PACF jest funkcją częściowej autokorelacji. Służy do określenia bezpośredniej zależności między $X_t$ a $X_{t+h}$. Definiujemy ją w następujący sposób
 
+$$\alpha(0)=1, \alpha(h) = \phi_{hh}, h \ge 1,$$
+gdzie $\phi_{hh}$ jest ostatnią składową $\phi_h = \Gamma_h^{-1}\gamma_h,$ gdzie $\Gamma_h = [\gamma(i-j)]^h_{i,j=i}, \gamma_h = [\gamma(1), \gamma(2), \dots, \gamma(h)]'.$
 
+PACF dla danych obliczymy z użyciem funkcji wbudowanej w języku programowania Python.
 
+```{python echo = FALSE, fig.cap = "\\label{fig:PACF bez obrobki 20}PACF dla surowych danych dla $h < 21$.", fig.pos = "H"}
+
+PACF_20 = pacf(max_temp_data, nlags=20)
+plt.plot(np.arange(21), PACF_20)
+plt.xlabel("$h$")
+plt.ylabel("PACF")
+```
+
+```{python echo = FALSE, fig.cap = "\\label{fig:PACF bez obrobki 1000}PACF dla surowych danych dla $h < 1001$.", fig.pos = "H"}
+
+PACF_20 = pacf(max_temp_data, nlags=1000)
+plt.plot(np.arange(1001), PACF_20)
+plt.xlabel("$h$")
+plt.ylabel("PACF")
+```
