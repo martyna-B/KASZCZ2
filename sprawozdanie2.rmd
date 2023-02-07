@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
-from scipy import stats
+from scipy import stats, optimize
 from statsmodels.tsa.stattools import pacf
 
 sns.set_style("darkgrid")
@@ -47,7 +47,7 @@ def autocorrelation_estimator(data, h):
     return autocovariance/variance
 ```
 
-## Wstęp
+# Wstęp
 
 Dane, które poddamy analizie, dotyczą pogody w Londynie w latach 1979-2020. Pomiary były dokonywane codziennie w stacji pogodowej w pobliżu lotniska Heathrow. Zawierają informacje dotyczące m.in. zachmurzenia, nasłonecznienia, ciśnienia oraz temperatury. W sprawozdaniu zajmiemy się analizą maksymalnej temperatury. Sprawdzimy trend deterministyczny i dokonamy dekompozycji, a następnie sprawdzimy jaki szereg czasowy najlepiej modeluje zachowanie danych. Szereg będziemy oznaczać jako $\{X_t\}$.
 
@@ -69,23 +69,23 @@ Z wykresu [\ref{wykres bez obrobki}] odczytujemy, że obserwowane wartości wyka
 
 
 
-## Przygotowanie danych do analizy
+# Przygotowanie danych do analizy
 
-### Wartości brakujące i obserwacje odstające.
+## Wartości brakujące i obserwacje odstające
 
 W danych znajduje się sześć dni, dla których nie zmierzono maksymalnej temperatury. Są to: 05.02, 10.03, 06.05, 16.07, 10.08 oraz 08.10 z 2020 roku. Z tego powodu weźmiemy pod uwagę jedynie dane sprzed 2020 roku. 
 
 ```{python include = FALSE}
-
+date_data = date_data[:-365]
 max_temp_data = max_temp_data[:-365]
 correct_date = correct_date[:-365]
 ```
 
 Najwyższa zaobserwowana temperatura wyniosła $37.9 ^\circ$, a najniższa $-6.2^\circ$. Wartości są wiarygodne, skąd wnioskujemy, że dane nie zawierają błędów w pomiarach.
 
-### Dekompozycja szeregu czasowego
+## Dekompozycja szeregu czasowego
 
-#### ACF oraz PACF dla surowych danych
+### ACF oraz PACF dla surowych danych
 
 ACF jest funkcją korelacji między dwoma obserwacjami z szeregu $\{X_t\}$, oddalonymi o $h$, gdzie $h \in \mathbf{Z}$, czyli $\mathrm{corr}(X_t, X_{t+h})$. Estymuje się ją w natępujący sposób:
 
@@ -139,8 +139,82 @@ plt.ylabel("PACF")
 
 ```{python echo = FALSE, fig.cap = "\\label{fig:PACF bez obrobki 1000}PACF dla surowych danych dla $h < 1001$.", fig.pos = "H"}
 
-PACF_20 = pacf(max_temp_data, nlags=1000)
-plt.plot(np.arange(1001), PACF_20)
+PACF_1000 = pacf(max_temp_data, nlags=1000)
+plt.plot(np.arange(1001), PACF_1000)
+plt.xlabel("$h$")
+plt.ylabel("PACF")
+```
+
+### Identyfikacja trendów deterministycznych
+
+```{python echo = FALSE, fig.cap = "\\label{fig:dopasowana prosta}Dopasowanie funkcji liniowej do danych.", fig.pos = "H"}
+line_fit = np.polyfit(np.arange(len(correct_date)), max_temp_data, 1)
+plt.plot(correct_date, max_temp_data, label = "Dane")
+plt.plot(correct_date, np.polyval(line_fit, np.arange(len(correct_date))), label = "Dopasowana prosta")
+plt.xlabel("Czas")
+plt.ylabel("Maksymalna temperatura")
+plt.legend()
+```
+
+```{python echo = FALSE, fig.cap = "\\label{fig:bez trendu}Maksymalna temperatura w Londynie po usunięciu trendu liniowego.", fig.pos = "H"}
+temp_without_trend = max_temp_data - np.polyval(line_fit, np.arange(len(correct_date)))
+plt.plot(correct_date, temp_without_trend)
+plt.xlabel("Czas")
+plt.ylabel("Maksymalna temperatura")
+```
+
+```{python echo = FALSE, fig.cap = "\\label{fig:dopasowany sinus}Dopasowanie funkcji okresowej do danych.", fig.pos = "H"}
+def my_sin(x, T, amplitude, phase, offset):
+    return np.sin(x * 2 * np.pi /T + phase) * amplitude + offset
+
+sin_fit = optimize.curve_fit(my_sin, np.arange(len(correct_date)), temp_without_trend, p0 = [365, 20, 0, 15])
+fitted_sin = my_sin(np.arange(len(correct_date)), *sin_fit[0])
+plt.plot(correct_date, temp_without_trend, label = "Dane")
+plt.plot(correct_date, fitted_sin, label = "Dopasowana funkcja okresowa")
+plt.xlabel("Czas")
+plt.ylabel("Maksymalna temperatura")
+plt.legend()
+```
+
+```{python echo = FALSE, fig.cap = "\\label{fig:bez sezonowości}Maksymalna temperatura w Londynie po usunięciu trendu liniowego i sezonowości.", fig.pos = "H"}
+temp_without_seasonality = temp_without_trend - fitted_sin
+plt.plot(correct_date, temp_without_seasonality)
+plt.xlabel("Czas")
+plt.ylabel("Maksymalna temperatura")
+```
+
+### ACF oraz PACF dla danych po usunięciu trendów deterministycznych
+
+```{python echo = FALSE, fig.cap = "\\label{fig:ACF po obrobce 20}ACF dla danych po usunięciu trendów deterministycznych dla $h < 21$.", fig.pos = "H"}
+
+autocorr_20_after = [autocorrelation_estimator(temp_without_seasonality, h) for h in H_20]
+
+plt.plot(H_20, autocorr_20_after)
+plt.xlabel("$h$")
+plt.ylabel("ACF")
+```
+
+```{python echo = FALSE, fig.cap = "\\label{fig:ACF po obrobce 1000}ACF dla danych po usunięciu trendów deterministycznych dla $h < 1001$.", fig.pos = "H"}
+
+autocorr_1000_after = [autocorrelation_estimator(temp_without_seasonality, h) for h in H_1000]
+
+plt.plot(H_1000, autocorr_1000_after)
+plt.xlabel("$h$")
+plt.ylabel("ACF")
+```
+
+```{python echo = FALSE, fig.cap = "\\label{fig:PACF po obrobce 20}PACF dla danych po usunięciu trendów deterministycznych dla $h < 21$.", fig.pos = "H"}
+
+PACF_20_after = pacf(temp_without_seasonality, nlags=20)
+plt.plot(np.arange(21), PACF_20_after)
+plt.xlabel("$h$")
+plt.ylabel("PACF")
+```
+
+```{python echo = FALSE, fig.cap = "\\label{fig:PACF po obrobce 1000}PACF dla danych po usunięciu trendów deterministycznych dla $h < 1001$.", fig.pos = "H"}
+
+PACF_1000_after = pacf(temp_without_seasonality, nlags=1000)
+plt.plot(np.arange(1001), PACF_1000_after)
 plt.xlabel("$h$")
 plt.ylabel("PACF")
 ```
