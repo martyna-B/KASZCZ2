@@ -28,6 +28,7 @@ import numpy as np
 from scipy import stats, optimize
 from statsmodels.tsa.stattools import pacf
 from IPython.display import display
+import statsmodels.api as sm
 
 sns.set_style("darkgrid")
 sns.set_palette(["steelblue", "red"]) 
@@ -71,7 +72,6 @@ plt.ylabel("Maksymalna temperatura")
 ```
 
 Z wykresu [\ref{wykres bez obrobki}] odczytujemy, że obserwowane wartości wykazują się sezonowością, zgodnie z oczekiwaniami. 
-
 
 
 # Przygotowanie danych do analizy
@@ -257,6 +257,8 @@ plt.ylabel("PACF")
 
 ## Modelowanie danych przy pomocy ARMA.
 
+### Dobranie rzędu modelu.
+
 Chcemy zamodelować dane szeregiem czasowym ARMA($p$, $q$). W tym celu musimy wyznaczyć optymalne wartości $p$ i $q$. Posłużymy się kryterium informacyjny Akaikego.
 
 Wyliczymy wartość AIC dla parametrów $p \in \{0, 1, \dots, 9\}$ oraz $q \in \{0, 1, \dots, 9\}$.
@@ -269,6 +271,39 @@ def color_blue(val):
     return 'color: % s' % color
   
 pq_df.style.applymap(color_blue)
-  
+
+#do zmiany na ładniejszą tabelę  
 display(pq_df)
+```
+
+AIC przyjmuje najmniejszą wartość dla $p=9, q=0$. Przyjmujemy więc, że badany szereg czasowy $\{X_t\}$ jest ARMA($9$, $0$), czyli AR($9$).
+
+### Estymacja parametrów modelu.
+
+Badany szereg czasowy $\{X_t\}$ jest postaci:
+
+$$X_t - \phi_1 X_{t-1} - \phi_2 X_{t-2} - \dots - \phi_9 X_{t-9} = Z_t,$$
+gdzie $Z_t \sim WN(0, \sigma^2).$ Wyestymujemy parametry $\phi_i$, korzystając z metody Yule-Walkera.
+
+```{python echo = FALSE}
+phi, sigma = sm.regression.yule_walker(max_temp_data, order=9)
+```
+
+```{=latex}
+
+\begin{table}[H]
+\label{tabela phi}
+\begin{center}
+\begin{tabular}{|l|l|ll}
+\hline
+\textbf{$\phi_1$} & 0.7588 & \multicolumn{1}{l|}{\textbf{$\phi_6$}} & \multicolumn{1}{l|}{0.0229} \\ \hline
+\textbf{$\phi_2$} & 0.0217 & \multicolumn{1}{l|}{\textbf{$\phi_7$}} & \multicolumn{1}{l|}{0.0255} \\ \hline
+\textbf{$\phi_3$} & 0.0130 & \multicolumn{1}{l|}{\textbf{$\phi_8$}} & \multicolumn{1}{l|}{0.0018} \\ \hline
+\textbf{$\phi_4$} & 0.0308 & \multicolumn{1}{l|}{\textbf{$\phi_9$}} & \multicolumn{1}{l|}{0.0556} \\ \hline
+\textbf{$\phi_5$} & 0.0332 &                                        &                             \\ \cline{1-2}
+\end{tabular}
+\end{center}
+\caption{Wartości parametrów $\phi_i$.}
+\end{table}
+
 ```
