@@ -18,6 +18,10 @@ knitr::opts_chunk$set(pythonreticulate = FALSE)
 
 ```{r include = FALSE}
 library(reticulate)
+library(aTSA)
+library(stats)
+library(tseries)
+library(nortest)
 ```
 
 ```{python include = FALSE}
@@ -27,6 +31,8 @@ import pandas as pd
 import numpy as np
 from scipy import stats, optimize
 from statsmodels.tsa.stattools import pacf
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.stats.diagnostic import het_arch
 from IPython.display import display
 import statsmodels.api as sm
 
@@ -255,9 +261,9 @@ plt.xlabel("$h$")
 plt.ylabel("PACF")
 ```
 
-## Modelowanie danych przy pomocy ARMA.
+## Modelowanie danych przy pomocy ARMA
 
-### Dobranie rzędu modelu.
+### Dobranie rzędu modelu
 
 Chcemy zamodelować dane szeregiem czasowym ARMA($p$, $q$). W tym celu musimy wyznaczyć optymalne wartości $p$ i $q$. Posłużymy się kryterium informacyjny Akaikego.
 
@@ -309,3 +315,93 @@ phi, sigma = sm.regression.yule_walker(max_temp_data, order=6)
 
 Wygenerujemy 1000 trajektorii szeregu czasowego AR($6$) o współczynnikach $\phi_i$ zadanych w tabeli [\ref{tabela phi}]. Następnie dla $h \in \{0, 1, \dots, 20\}$ wyestymujemy dla każdej z nich wartości PACF oraz ACF, aby stworzyć przedziały ufności na poziomie ufności $0.05$.
 
+# Weryfikacja założeń dotyczących szumu
+
+```{python include = FALSE}
+p = 6
+q = 0
+model = ARIMA(temp_without_seasonality, order = (p, 0, q)).fit(method = "yule_walker")
+residuals = model.resid
+```
+
+## Założenie dotyczące średniej
+
+```{r include = FALSE}
+pvalue_ttest <- t.test(py$residuals)$p.value
+```
+
+Wykres [\ref{fig:residua średnia}] przedstawia wartości residuów w zależności od numeru obserwacji. Wartości wyglądają na rozłożone symetrycznie względem zera, a ich średnia wynosi `r mean(py$residuals)`. Do sprawdzenia, czy jest ona istotnie różna od zera wykorzystamy test t-Studenta. Przyjmujemy poziom istotności $\alpha = 0.05$. P-wartość w$~$przeprowadzonym teście wynosi `r pvalue_ttest`, więc nie ma podstaw do odrzucenia hipotezy zerowej. Będziemy zakładać, że residua mają średnią równą $0$.
+
+```{python echo = FALSE, fig.cap = "\\label{fig:residua średnia}Wykres wartości resztowych.", fig.pos = "H"}
+plt.scatter(np.arange(len(correct_date)), residuals, alpha = 0.3)
+plt.axhline(0, color = "red")
+plt.xlabel("Numer obserwacji")
+plt.ylabel("Wartości resztowe")
+```
+
+
+## Założenie dotyczące wariancji
+
+```{python include = FALSE}
+# DO ZMIANY
+pvalue_wariancja = het_arch(residuals)[1]
+```
+
+```{r include = FALSE}
+pvalue_wariancja <- py$pvalue_wariancja
+```
+
+Na wykresie [\ref{fig:residua średnia}] nie są zauważalne znaczące zmiany w wielkości rozproszenia. Możemy wykonać test ARCH weryfikujący hipotezę o stałości wariancji. Przyjmujemy poziom istotności $\alpha = 0.05$. P-wartość w przeprowadzonym teście wynosi `r pvalue_wariancja`, więc odrzucamy hipotezę o stałości wariancji wartości resztowych.
+
+## Założenie dotyczące niezależności
+
+```{r include = FALSE}
+pvalue_ljungbox <- Box.test(py$residuals, lag = 1, type = "Ljung-Box", fitdf = 0)$p.value
+```
+
+Na podstawie wykresu [\ref{fig:ACF residua}] możemy przypuszczać, że residua są niezależne, bo wartości funkcji empirycznej autokorelacji są bliskie zeru dla $h \neq 1$. Dodatkowo możemy przeprowadzić test Ljunga-Boxa sprawdzający prawdziwość hipotezy zerowej o niezależności danych. Przyjmujemy poziom istotności $\alpha = 0.05$. P-wartość w przeprowadzonym teście wynosi `r pvalue_ljungbox`, więc nie ma podstaw do odrzucenia hipotezy zerowej. Możemy założyć, że residua są niezależne.
+
+```{python echo = FALSE, fig.cap = "\\label{fig:ACF residua}Funkcja empirycznej autokorelacji dla wartości resztkowych.", fig.pos = "H"}
+
+autocorr_residuals = [autocorrelation_estimator(residuals, h) for h in H_20]
+
+plt.scatter(H_20, autocorr_residuals)
+plt.xlabel("$h$")
+plt.ylabel("ACF")
+```
+
+
+## Założenie dotyczące normalności rozkładu
+
+```{r include = FALSE}
+pvalue_normtest <- jarque.bera.test(py$residuals)$p.value
+pvalue_normtest2 <- ks.test(py$residuals, "pnorm", mean(py$residuals), sd(py$residuals))$p.value
+pvalue_normtest3 <- lillie.test(py$residuals)$p.value
+```
+
+Na wykresie [\ref{fig:residua hist}] widać niewielkie różnice między gęstością empiryczną a teoretyczną gęstością rozkładu normalnego, natomiast punkty na wykresie [\ref{fig:qqplot}] układają się w prawie prostą linię. Do zweryfikowania hipotezy o normalności rozkładu wykorzystamy test Kołmogorowa-Smirnowa. Przyjmujemy poziom istotności $\alpha = 0.05$. P-wartość w przeprowadzonym teście wynosi `r pvalue_normtest2`, więc odrzucamy hipotezę o rozkładzie normalnym wartości resztowych.
+
+```{r, echo=FALSE, fig.cap = "\\label{fig:residua hist}Porównanie empirycznej i teoretycznej gęstości dla wartości resztowych.",  fig.align='center', fig.pos="H"}
+knitr::include_graphics("resid_density.pdf")
+```
+
+```{python include = FALSE}
+f, ax = plt.subplots(1)
+sns.histplot(x = residuals, ax = ax, kde = True, stat = "density", bins = 20, label = "Gęstość empiryczna")
+sns.lineplot(x = np.arange(-10, 10, 0.001), y = stats.norm.pdf(np.arange(-10, 10, 0.001), np.mean(residuals), np.std(residuals)), color = "red", label = "Gęstość rozkładu normalnego")
+ax.set(ylabel = "Gęstość")
+plt.savefig('resid_density.pdf')
+```
+
+```{r, echo=FALSE, fig.cap = "\\label{fig:qqplot}Wykres kwantylowy -- porównanie kwantyli empirycznych wartości resztowych z kwantylami rozkładu normalnego.",  fig.align='center', fig.pos="H"}
+knitr::include_graphics("qqplot.pdf")
+```
+
+```{python include = FALSE}
+f, ax = plt.subplots(1)
+sm.qqplot(residuals, ax = ax)
+ax.set(xlabel = "Kwantyle teoretyczne", ylabel = "Kwantyle empiryczne")
+plt.savefig("qqplot.pdf")
+```
+
+# Wnioski
