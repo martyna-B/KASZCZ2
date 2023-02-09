@@ -150,8 +150,8 @@ knitr::include_graphics("ACF_PACF_przed.pdf")
 
 W danych widać trend liniowy i sezonowość dlatego spodziewamy się, że 
 
-$$X_t = m(t) + s(t) + Y_t,$$
-gdzie $m(t)$ to wielomian rzędu 1, $s(t)$ to funkcja okresowa, a ${Y_t}$ to szereg ARMA($p$, $q$).
+$$Y_t = m(t) + s(t) + X_t,$$
+gdzie $m(t)$ to wielomian rzędu 1, $s(t)$ to funkcja okresowa, a $\{X_t\}$ to szereg ARMA($p$, $q$).
 
 ```{python include = FALSE}
 line_fit = np.polyfit(np.arange(len(correct_date)), max_temp_data, 1)
@@ -458,3 +458,19 @@ knitr::include_graphics("qqplot.pdf")
 
 
 # Wnioski -- podsumowanie
+
+W analizie skupiłyśmy się na próbie dobrania odpowiedniego modelu do opisania maksymalnej temperatury w Londynie na podstawie danych z lat 1979-2019.
+
+Ze względu na widoczny trend i sezonowość w danych przyjęłyśmy, że można je opisać modelem $Y_t = m(t) + s(t) + X_t$, gdzie $m(t)$ to wielomian stopnia 1, $s(t)$ to funkcja okresowa, a $\{X_t\}$ to szereg ARMA($p$, $q$).
+
+Do wyznaczenia współczynników funkcji $m(t)$ i $s(t)$ zastosowałyśmy metodę najmniejszych kwadratów i otrzymałyśmy, że $m(t) \approx `r round(line_fit[1], 6)` t + `r round(line_fit[2], 2)`$ i $s(t) \approx `r round(sin_fit[2], 2)`\sin \left( \frac{2\pi t}{`r round(sin_fit[1], 2)`} + `r round(sin_fit[3], 2)`\right)$.
+
+Do wyznaczenia optymalnych parametrów $p$ i $q$ wykorzystałyśmy kryterium informacyjne Akaikiego. Na jego podstawie przyjęłyśmy, że $p = 6$ i $q = 0$, czyli $X_t - \phi_1 X_{t-1} - \phi_2 X_{t-2} - \dots - \phi_6 X_{t-6} = Z_t$, gdzie $Z_t \sim WN(0, \sigma)$.
+
+Parametry $\phi_i$ i $\sigma$ wyestymowałyśmy metodą Yule-Walkera otrzymując $\phi_1 = 0.7031$, $\phi_2 = 0.0063$, $\phi_3 = -0.0023$, $\phi_4 = 0.0156$, $\phi_5 = 0.0181$, $\phi_6 = 0.0155$ oraz $\sigma = 2.3298$.
+
+Na podstawie stworzonych przedziałów ufności na poziomie ufności $0.05$ zaobserwowałyśmy, że dla dużych wartości $h$ wartości ACF dla badanego szeregu nie mieszą się w przedziale ufności.
+
+W analizie wartości resztowych pokazałyśmy, że możemy przyjąć, że residua mają średnią równą 0 i są niezależne, ale wariancja nie jest stała i nie mają one rozkładu normalnego, więc na tej podstawie wnioskujemy, że model nie został poprawnie dobrany do danych.
+
+
