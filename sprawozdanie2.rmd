@@ -360,7 +360,7 @@ plt.ylabel("PACF")
 
 ```
 
-Podobnie jak dla funkcji ACF, również dla PACF niektóre wartości obliczone dla szeregu $\{X_t\}$ wykraczają poza przedział ufności.
+Podobnie jak dla funkcji ACF, również dla PACF niektóre wartości obliczone dla szeregu $\{X_t\}$ wykraczają poza przedział ufności. Jest to możliwe, jednak może oznaczać, że model ARMA(6,0) nie przybliża dobrze badanych danych.
 
 ### Porównanie linii kwantylowych z trajektorią
 
