@@ -256,12 +256,9 @@ Wyliczymy wartość AIC dla parametrów $p \in \{0, 1, \dots, 9\}$ oraz $q \in \
 
 ```{python echo = FALSE}
 pq_df = pd.read_csv("pq.csv")
-
-#do zmiany na ładniejszą tabelę  
-display(pq_df)
 ```
 
-AIC przyjmuje najmniejszą wartość dla $p=6, q=0$. Przyjmujemy więc, że badany szereg czasowy $\{X_t\}$ jest ARMA($6$, $0$), czyli AR($6$).
+Okazuje się, że AIC przyjmuje najmniejszą wartość dla $p=6, q=0$. Przyjmujemy więc, że badany szereg czasowy $\{X_t\}$ jest ARMA($6$, $0$), czyli AR($6$).
 
 ### Estymacja parametrów modelu.
 
@@ -311,17 +308,20 @@ lowers_acf = []
 for lag in lags_acf_arr:
     lags_list = list(lag)
     lags_list.sort()
-    uppers_acf.append(lags_list[994])
-    lowers_acf.append(lags_list[4])
+    uppers_acf.append(lags_list[974])
+    lowers_acf.append(lags_list[24])
 
 ax.plot(H_20, lowers_acf, color = "red", alpha=0.5)
 ax.plot(H_20, uppers_acf, color = "red", label="Przedziały ufności", alpha=0.5)
-ax.scatter(H_20, autocorr_20_after, label="ACF szeregu $\{X_t\}$")
+ax.scatter(H_20, autocorr_20_after, s = 10, label="ACF szeregu $\{X_t\}$")
+
 plt.legend()
 plt.xlabel("$h$")
 plt.ylabel("ACF")
 
 ```
+
+Na wykresie [\ref{fig:ACF przedzialy ufnosci}] obserwujemy, że dla większych wartości $h$ wartości ACF obliczone dla szeregu $\{X_t\}$ wykraczają poza przedział ufności. 
 
 ```{python echo=FALSE, fig.cap = "\\label{fig:PACF przedzialy ufnosci}Przedziały ufności PACF dla $h <21$.", fig.pos = "H"}
 
@@ -335,21 +335,37 @@ lowers_pacf = []
 for lag in lags_pacf_arr:
     lags_list = list(lag)
     lags_list.sort()
-    uppers_pacf.append(lags_list[994])
-    lowers_pacf.append(lags_list[4])
+    uppers_pacf.append(lags_list[974])
+    lowers_pacf.append(lags_list[24])
 
 plt.plot(H_20, lowers_pacf, color = "red", alpha=0.5)
 plt.plot(H_20, uppers_pacf, color = "red", label="Przedziały ufności", alpha=0.5)
-plt.scatter(H_20, PACF_20_after, label="PACF szeregu $\{X_t\}$")
+plt.scatter(H_20, PACF_20_after, s=10, label="PACF szeregu $\{X_t\}$")
 plt.legend()
 plt.xlabel("$h$")
 plt.ylabel("PACF")
 
 ```
 
-## Porównanie linii kwantylowych z trajektorią
 
-Wykorzystamy 1000 tajektorii wygenerowanych wcześniej szeregów, aby stworzyć linie kwantylowe dla kwantyli
+Podobnie jak dla funkcji ACF, również dla PACF niektóre wartości obliczone dla szeregu $\{X_t\}$ wykraczają poza przedział ufności.
+
+### Porównanie linii kwantylowych z trajektorią
+
+Wykorzystamy 1000 trajektorii wygenerowanych wcześniej szeregów, aby stworzyć linie kwantylowe dla kwantyli: $0.2$, $0.5$, $0.8$ oraz $0.99$. 
+
+```{r, echo=FALSE, fig.cap = "\\label{fig:niewygladzony}Linie kwantylowe",  fig.align='center', fig.pos="H"}
+knitr::include_graphics("Niewygładzone.pdf")
+```
+
+Na wykresie [\ref{fig:niewygladzony}] zostały przedstawione linie kwantylowe. Wyznaczają one przedziały, do których należy kolejno $20\%, 50\%, 80\%$ oraz $90\%$ obserwacji z 1000 wygenerowanych trajektorii dla kolejnych czasów.
+
+```{r, echo=FALSE, fig.cap = "\\label{fig:wygladzony}Wygładzone linie kwantylowe",  fig.align='center', fig.pos="H"}
+knitr::include_graphics("Wygładzone.pdf")
+```
+
+Ze wzlęgu na niską czytelność wykresu [\ref{fig:niewygladzony}], na wykresie [\ref{fig:wygladzony}] przedstawiłyśmy linie kwantylowe, wygładzone metodą średniej ruchomej dla $p=7$.
+
 
 # Weryfikacja założeń dotyczących szumu
 
@@ -417,10 +433,6 @@ pvalue_normtest3 <- lillie.test(py$residuals)$p.value
 
 Na wykresie [\ref{fig:residua hist}] widać niewielkie różnice między gęstością empiryczną a teoretyczną gęstością rozkładu normalnego, natomiast punkty na wykresie [\ref{fig:qqplot}] układają się w prawie prostą linię. Do zweryfikowania hipotezy o normalności rozkładu wykorzystamy test Kołmogorowa-Smirnowa. Przyjmujemy poziom istotności $\alpha = 0.05$. P-wartość w przeprowadzonym teście wynosi `r pvalue_normtest2`, więc odrzucamy hipotezę o rozkładzie normalnym wartości resztowych.
 
-```{r, echo=FALSE, fig.cap = "\\label{fig:residua hist}Porównanie empirycznej i teoretycznej gęstości dla wartości resztowych.",  fig.align='center', fig.pos="H"}
-knitr::include_graphics("resid_density.pdf")
-```
-
 ```{python include = FALSE}
 f, ax = plt.subplots(1)
 sns.histplot(x = residuals, ax = ax, kde = True, stat = "density", bins = 20, label = "Gęstość empiryczna")
@@ -429,8 +441,8 @@ ax.set(ylabel = "Gęstość")
 plt.savefig('resid_density.pdf')
 ```
 
-```{r, echo=FALSE, fig.cap = "\\label{fig:qqplot}Wykres kwantylowy -- porównanie kwantyli empirycznych wartości resztowych z kwantylami rozkładu normalnego.",  fig.align='center', fig.pos="H"}
-knitr::include_graphics("qqplot.pdf")
+```{r, echo=FALSE, fig.cap = "\\label{fig:residua hist}Porównanie empirycznej i teoretycznej gęstości dla wartości resztowych.",  fig.align='center', fig.pos="H"}
+knitr::include_graphics("resid_density.pdf")
 ```
 
 ```{python include = FALSE}
@@ -438,6 +450,10 @@ f, ax = plt.subplots(1)
 sm.qqplot(residuals, ax = ax)
 ax.set(xlabel = "Kwantyle teoretyczne", ylabel = "Kwantyle empiryczne")
 plt.savefig("qqplot.pdf")
+```
+
+```{r, echo=FALSE, fig.cap = "\\label{fig:qqplot}Wykres kwantylowy -- porównanie kwantyli empirycznych wartości resztowych z kwantylami rozkładu normalnego.",  fig.align='center', fig.pos="H"}
+knitr::include_graphics("qqplot.pdf")
 ```
 
 
