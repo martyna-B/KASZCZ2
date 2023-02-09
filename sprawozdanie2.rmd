@@ -271,12 +271,9 @@ Wyliczymy wartość AIC dla parametrów $p \in \{0, 1, \dots, 9\}$ oraz $q \in \
 
 ```{python echo = FALSE}
 pq_df = pd.read_csv("pq.csv")
-
-#do zmiany na ładniejszą tabelę  
-display(pq_df)
 ```
 
-AIC przyjmuje najmniejszą wartość dla $p=6, q=0$. Przyjmujemy więc, że badany szereg czasowy $\{X_t\}$ jest ARMA($6$, $0$), czyli AR($6$).
+Okazuje się, że AIC przyjmuje najmniejszą wartość dla $p=6, q=0$. Przyjmujemy więc, że badany szereg czasowy $\{X_t\}$ jest ARMA($6$, $0$), czyli AR($6$).
 
 ### Estymacja parametrów modelu.
 
@@ -330,12 +327,14 @@ for lag in lags_acf_arr:
 
 plt.plot(H_20, lowers_acf, color = "red", alpha=0.5)
 plt.plot(H_20, uppers_acf, color = "red", label="Przedziały ufności", alpha=0.5)
-plt.scatter(H_20, autocorr_20_after, label="ACF szeregu $\{X_t\}$")
+plt.scatter(H_20, autocorr_20_after, s = 10, label="ACF szeregu $\{X_t\}$")
 plt.legend()
 plt.xlabel("$h$")
 plt.ylabel("ACF")
 
 ```
+
+Na wykresie [\ref{fig:ACF przedzialy ufnosci}] obserwujemy, że dla większych wartości $h$ wartości ACF obliczone dla szeregu $\{X_t\}$ wykraczają poza przedział ufności. 
 
 ```{python echo=FALSE, fig.cap = "\\label{fig:PACF przedzialy ufnosci}Przedziały ufności PACF dla $h <21$.", fig.pos = "H"}
 
@@ -354,12 +353,14 @@ for lag in lags_pacf_arr:
 
 plt.plot(H_20, lowers_pacf, color = "red", alpha=0.5)
 plt.plot(H_20, uppers_pacf, color = "red", label="Przedziały ufności", alpha=0.5)
-plt.scatter(H_20, PACF_20_after, label="PACF szeregu $\{X_t\}$")
+plt.scatter(H_20, PACF_20_after, s=10, label="PACF szeregu $\{X_t\}$")
 plt.legend()
 plt.xlabel("$h$")
 plt.ylabel("PACF")
 
 ```
+
+Podobnie jak dla funkcji ACF, również dla PACF niektóre wartości obliczone dla szeregu $\{X_t\}$ wykraczają poza przedział ufności.
 
 ### Porównanie linii kwantylowych z trajektorią
 
@@ -369,13 +370,13 @@ Wykorzystamy 1000 trajektorii wygenerowanych wcześniej szeregów, aby stworzyć
 knitr::include_graphics("Niewygładzone.pdf")
 ```
 
-Na wykresie [\ref{niewygladzony}] zostały przedstawione linie kwantylowe. Wyznaczają one przedziały, do których należy kolejno $20\%, 50\%, 80\%$ oraz $90\%$ obserwacji z 1000 wygenerowanych trajektorii dla kolejnych czasów. 
+Na wykresie [\ref{fig:niewygladzony}] zostały przedstawione linie kwantylowe. Wyznaczają one przedziały, do których należy kolejno $20\%, 50\%, 80\%$ oraz $90\%$ obserwacji z 1000 wygenerowanych trajektorii dla kolejnych czasów.
 
 ```{r, echo=FALSE, fig.cap = "\\label{fig:wygladzony}Wygładzone linie kwantylowe",  fig.align='center', fig.pos="H"}
 knitr::include_graphics("Wygładzone.pdf")
 ```
 
-
+Ze wzlęgu na niską czytelność wykresu [\ref{fig:niewygladzony}], na wykresie [\ref{fig:wygladzony}] przedstawiłyśmy linie kwantylowe, wygładzone metodą średniej ruchomej dla $p=7$.
 
 
 # Weryfikacja założeń dotyczących szumu
