@@ -61,7 +61,7 @@ def autocorrelation_estimator(data, h):
 
 # Wstęp
 
-Dane, które poddamy analizie, dotyczą pogody w Londynie w latach 1979-2020. Pomiary były dokonywane codziennie w stacji pogodowej w pobliżu lotniska Heathrow. Zawierają informacje dotyczące m.in. zachmurzenia, nasłonecznienia, ciśnienia oraz temperatury. W sprawozdaniu zajmiemy się analizą maksymalnej temperatury. Sprawdzimy trend deterministyczny i dokonamy dekompozycji, a następnie sprawdzimy jaki szereg czasowy najlepiej modeluje zachowanie danych. Szereg będziemy oznaczać jako $\{X_t\}$.
+Dane, które poddamy analizie, dotyczą pogody w Londynie w latach 1979-2020 i zostały udostępnione na platformie Kaggle [[1]](https://www.kaggle.com/datasets/emmanuelfwerr/london-weather-data?fbclid=IwAR3AbBw7t-f_d0s55A0JHeNtSuuY1Q6XePQX1US5JYTf2xrPBazMA3mWaNM). Pomiary były dokonywane codziennie w stacji pogodowej w pobliżu lotniska Heathrow. Zawierają informacje dotyczące m.in. zachmurzenia, nasłonecznienia, ciśnienia oraz temperatury. W sprawozdaniu zajmiemy się analizą maksymalnej temperatury. Sprawdzimy trend deterministyczny i dokonamy dekompozycji, a następnie sprawdzimy jaki szereg czasowy najlepiej modeluje zachowanie danych. Szereg będziemy oznaczać jako $\{X_t\}$.
 
 
  
@@ -107,31 +107,6 @@ $$\hat{\gamma}(h) = \frac{1}{n} \sum_{t=1}^{n - |h|} (x_{t+|h|} - \overline{x})(
 
 gdzie $x_1, x_2, \dots, x_n$ są realizacjami szeregu czasowego $X_t$, a $\overline{x} = \frac{1}{n}\sum_{i=1}^n x_i$.
 
-Obliczamy ACF dla badanego szeregu czasowego, dla $h=0, 1, 2, \dots 20$.
-
-```{python echo = FALSE, fig.cap = "\\label{fig:ACF bez obrobki 20}ACF dla surowych danych dla $h < 21$.", fig.pos = "H"}
-
-H_20 = np.arange(21)
-autocorr_20 = [autocorrelation_estimator(max_temp_data, h) for h in H_20]
-
-plt.plot(H_20, autocorr_20)
-plt.xlabel("$h$")
-plt.ylabel("ACF")
-```
-
-
-
-```{python echo = FALSE, fig.cap = "\\label{fig:ACF bez obrobki 1000}ACF dla surowych danych dla $h < 1001$.", fig.pos = "H"}
-
-#to pewnie się usunie
-
-H_1000 = np.arange(1001)
-autocorr_1000 = [autocorrelation_estimator(max_temp_data, h) for h in H_1000]
-
-plt.plot(H_1000, autocorr_1000)
-plt.xlabel("$h$")
-plt.ylabel("ACF")
-```
 
 PACF jest funkcją częściowej autokorelacji. Służy do określenia bezpośredniej zależności między $X_t$ a $X_{t+h}$. Definiujemy ją w następujący sposób
 
@@ -140,28 +115,43 @@ gdzie $\phi_{hh}$ jest ostatnią składową $\phi_h = \Gamma_h^{-1}\gamma_h,$ gd
 
 PACF dla danych obliczymy z użyciem funkcji wbudowanej w języku programowania Python.
 
-```{python echo = FALSE, fig.cap = "\\label{fig:PACF bez obrobki 20}PACF dla surowych danych dla $h < 21$.", fig.pos = "H"}
+Na wykresie [\ref{fig:ACF i PACF bez obrobki}] widać, że funkcja empirycznej autokorelacji jest okresowa i nie zanika do zera. Wskazuje to na niestacjonarność badanego szeregu. Może być ona spowodowana obecnością trendów deterministycznych w danych, więc w dalszej części pracy zajmiemy się ich identyfikacją.
 
-PACF_20 = pacf(max_temp_data, nlags=20)
-plt.plot(np.arange(21), PACF_20)
-plt.xlabel("$h$")
-plt.ylabel("PACF")
+```{python include = FALSE}
+H_20 = np.arange(21)
+H_1000 = np.arange(1001)
+
+autocorr_20 = [autocorrelation_estimator(max_temp_data, h) for h in H_20]
+autocorr_1000 = [autocorrelation_estimator(max_temp_data, h) for h in H_1000]
+PACF_20 = pacf(max_temp_data, nlags = 20)
+PACF_1000 = pacf(max_temp_data, nlags = 1000)
+
+fig, ((ax_acf20, ax_acf1000), (ax_pacf20, ax_pacf1000)) = plt.subplots(2, 2)
+fig.tight_layout(pad = 2.0)
+
+ax_acf20.plot(H_20, autocorr_20)
+ax_acf1000.plot(H_1000, autocorr_1000)
+ax_pacf20.plot(H_20, PACF_20)
+ax_pacf1000.plot(H_1000, PACF_1000)
+
+ax_acf20.set(xlabel = "$h$", ylabel = "ACF")
+ax_acf1000.set(xlabel = "$h$", ylabel = "ACF")
+ax_pacf20.set(xlabel = "$h$", ylabel = "PACF")
+ax_pacf1000.set(xlabel = "$h$", ylabel = "PACF")
+
+plt.savefig('ACF_PACF_przed.pdf')
 ```
 
-```{python echo = FALSE, fig.cap = "\\label{fig:PACF bez obrobki 1000}PACF dla surowych danych dla $h < 1001$.", fig.pos = "H"}
-
-PACF_1000 = pacf(max_temp_data, nlags=1000)
-plt.plot(np.arange(1001), PACF_1000)
-plt.xlabel("$h$")
-plt.ylabel("PACF")
+```{r, echo=FALSE, fig.cap = "\\label{fig:ACF i PACF bez obrobki}ACF i PACF dla surowych danych.",  fig.align = "center", fig.pos = "H"}
+knitr::include_graphics("ACF_PACF_przed.pdf")
 ```
 
 ### Identyfikacja trendów deterministycznych
 
 W danych widać trend liniowy i sezonowość dlatego spodziewamy się, że 
 
-$$X_t = m(t) + s(t) + Y_t,$$
-gdzie $m(t)$ to wielomian rzędu 1, $s(t)$ to funkcja okresowa, a ${Y_t}$ to szereg ARMA($p$, $q$).
+$$Y_t = m(t) + s(t) + X_t,$$
+gdzie $m(t)$ to wielomian rzędu 1, $s(t)$ to funkcja okresowa, a $\{X_t\}$ to szereg ARMA($p$, $q$).
 
 ```{python include = FALSE}
 line_fit = np.polyfit(np.arange(len(correct_date)), max_temp_data, 1)
@@ -177,8 +167,9 @@ $$m(t) \approx `r round(line_fit[1], 6)` t + `r round(line_fit[2], 2)`,$$
 gdzie $t$ oznacza liczbę dni, które upłynęły od 1.01.1979r. Dodatni współczynnik kierunkowy prostej $m(t)$ wskazuje, że wraz z upływem czasu rosły maksymalne temperatury powietrza w Londynie. Po analizie wykresu [\ref{fig:dopasowana prosta}] możemy stwierdzić, że dopasowana prosta adekwatnie opisuje ten wzrost temperatur, więc zakładamy, że współczynniki zostały dobrane poprawnie.
 
 ```{python echo = FALSE, fig.cap = "\\label{fig:dopasowana prosta}Dopasowanie funkcji liniowej do danych.", fig.pos = "H"}
-plt.plot(correct_date, max_temp_data, label = "Dane")
-plt.plot(correct_date, np.polyval(line_fit, np.arange(len(correct_date))), label = "Dopasowana prosta")
+fig, ax = plt.subplots(1)
+ax.plot(correct_date, max_temp_data, label = "Dane")
+ax.plot(correct_date, np.polyval(line_fit, np.arange(len(correct_date))), label = "Dopasowana prosta")
 plt.xlabel("Czas")
 plt.ylabel("Maksymalna temperatura")
 plt.legend()
@@ -227,43 +218,37 @@ plt.ylabel("Maksymalna temperatura")
 
 ### ACF oraz PACF dla danych po usunięciu trendów deterministycznych
 
-```{python echo = FALSE, fig.cap = "\\label{fig:ACF po obrobce 20}ACF dla danych po usunięciu trendów deterministycznych dla $h < 21$.", fig.pos = "H"}
+Na wykresie [\ref{fig:ACF i PACF po obrobce}] widać, że funkcje autokorelacji i częściowej autokorelacji dla danych pozbawianych trendów deterministycznych szybko zaczynają przyjmować wartości w okolicach zera. Jest to oczekiwane zachowanie dla danych pochodzących z modelu ARMA.
 
+```{python include = FALSE}
 autocorr_20_after = [autocorrelation_estimator(temp_without_seasonality, h) for h in H_20]
-
-plt.plot(H_20, autocorr_20_after)
-plt.xlabel("$h$")
-plt.ylabel("ACF")
-```
-
-```{python echo = FALSE, fig.cap = "\\label{fig:ACF po obrobce 1000}ACF dla danych po usunięciu trendów deterministycznych dla $h < 1001$.", fig.pos = "H"}
-
 autocorr_1000_after = [autocorrelation_estimator(temp_without_seasonality, h) for h in H_1000]
+PACF_20_after = pacf(temp_without_seasonality, nlags = 20)
+PACF_1000_after = pacf(temp_without_seasonality, nlags = 1000)
 
-plt.plot(H_1000, autocorr_1000_after)
-plt.xlabel("$h$")
-plt.ylabel("ACF")
+fig, ((ax_acf20, ax_acf1000), (ax_pacf20, ax_pacf1000)) = plt.subplots(2, 2)
+fig.tight_layout(pad = 2.0)
+
+ax_acf20.plot(H_20, autocorr_20_after)
+ax_acf1000.plot(H_1000, autocorr_1000_after)
+ax_pacf20.plot(H_20, PACF_20_after)
+ax_pacf1000.plot(H_1000, PACF_1000_after)
+
+ax_acf20.set(xlabel = "$h$", ylabel = "ACF")
+ax_acf1000.set(xlabel = "$h$", ylabel = "ACF")
+ax_pacf20.set(xlabel = "$h$", ylabel = "PACF")
+ax_pacf1000.set(xlabel = "$h$", ylabel = "PACF")
+
+plt.savefig('ACF_PACF_po.pdf')
 ```
 
-```{python echo = FALSE, fig.cap = "\\label{fig:PACF po obrobce 20}PACF dla danych po usunięciu trendów deterministycznych dla $h < 21$.", fig.pos = "H"}
-
-PACF_20_after = pacf(temp_without_seasonality, nlags=20)
-plt.plot(np.arange(21), PACF_20_after)
-plt.xlabel("$h$")
-plt.ylabel("PACF")
+```{r, echo=FALSE, fig.cap = "\\label{fig:ACF i PACF po obrobce}ACF i PACF dla danych po usunięciu trendów deterministycznych.",  fig.align = "center", fig.pos = "H"}
+knitr::include_graphics("ACF_PACF_po.pdf")
 ```
 
-```{python echo = FALSE, fig.cap = "\\label{fig:PACF po obrobce 1000}PACF dla danych po usunięciu trendów deterministycznych dla $h < 1001$.", fig.pos = "H"}
+# Modelowanie danych przy pomocy ARMA
 
-PACF_1000_after = pacf(temp_without_seasonality, nlags=1000)
-plt.plot(np.arange(1001), PACF_1000_after)
-plt.xlabel("$h$")
-plt.ylabel("PACF")
-```
-
-## Modelowanie danych przy pomocy ARMA
-
-### Dobranie rzędu modelu
+## Dobranie rzędu modelu
 
 Chcemy zamodelować dane szeregiem czasowym ARMA($p$, $q$). W tym celu musimy wyznaczyć optymalne wartości $p$ i $q$. Posłużymy się kryterium informacyjny Akaikego.
 
@@ -304,14 +289,15 @@ phi, sigma = sm.regression.yule_walker(max_temp_data, order=6)
 
 ```
 
-## Ocena dopasowania modelu
+# Ocena dopasowania modelu
 
-### Przedziały ufności dla PACF oraz ACF
+## Przedziały ufności dla PACF oraz ACF
 
 Wygenerujemy 1000 trajektorii szeregu czasowego AR($6$) o współczynnikach $\phi_i$ zadanych w tabeli [\ref{tabela phi}]. Następnie dla $h \in \{0, 1, \dots, 20\}$ wyestymujemy dla każdej z nich wartości PACF oraz ACF, aby stworzyć przedziały ufności na poziomie ufności $0.05$.
 
 ```{python echo=FALSE, fig.cap = "\\label{fig:ACF przedzialy ufnosci}Przedziały ufności ACF dla $h <21$.", fig.pos = "H"}
 
+fig, ax = plt.subplots(1)
 lags_acf = pd.read_csv("acf_przedzialy_ufnosci.csv")
 
 lags_acf_arr = np.array(lags_acf)
@@ -325,9 +311,10 @@ for lag in lags_acf_arr:
     uppers_acf.append(lags_list[974])
     lowers_acf.append(lags_list[24])
 
-plt.plot(H_20, lowers_acf, color = "red", alpha=0.5)
-plt.plot(H_20, uppers_acf, color = "red", label="Przedziały ufności", alpha=0.5)
-plt.scatter(H_20, autocorr_20_after, s = 10, label="ACF szeregu $\{X_t\}$")
+ax.plot(H_20, lowers_acf, color = "red", alpha=0.5)
+ax.plot(H_20, uppers_acf, color = "red", label="Przedziały ufności", alpha=0.5)
+ax.scatter(H_20, autocorr_20_after, s = 10, label="ACF szeregu $\{X_t\}$")
+
 plt.legend()
 plt.xlabel("$h$")
 plt.ylabel("ACF")
@@ -381,6 +368,8 @@ Ze wzlęgu na niską czytelność wykresu [\ref{fig:niewygladzony}], na wykresie
 
 # Weryfikacja założeń dotyczących szumu
 
+Wartościami resztowymi lub residuami modelu będziemy nazywać realizacje zmiennych losowych $Z_i$. W$~$modelu założyliśmy, że $Z_i \sim WN(0, \sigma)$, więc musimy sprawdzić, czy te założenia są spełnione.
+
 ```{python include = FALSE}
 p = 6
 q = 0
@@ -403,7 +392,6 @@ plt.xlabel("Numer obserwacji")
 plt.ylabel("Wartości resztowe")
 ```
 
-
 ## Założenie dotyczące wariancji
 
 ```{python include = FALSE}
@@ -414,7 +402,7 @@ pvalue_wariancja = het_arch(residuals)[1]
 pvalue_wariancja <- py$pvalue_wariancja
 ```
 
-Na wykresie [\ref{fig:residua średnia}] nie są zauważalne znaczące zmiany w wielkości rozproszenia. Możemy wykonać test ARCH weryfikujący hipotezę o stałości wariancji. Przyjmujemy poziom istotności $\alpha = 0.05$. P-wartość w przeprowadzonym teście wynosi `r pvalue_wariancja`, więc odrzucamy hipotezę o stałości wariancji wartości resztowych.
+Na wykresie [\ref{fig:residua średnia}] nie są zauważalne znaczące zmiany w wielkości rozproszenia jednak w celu dokładniejszej analizy możemy wykonać test ARCH weryfikujący hipotezę o stałości wariancji. Przyjmujemy poziom istotności $\alpha = 0.05$. P-wartość w przeprowadzonym teście wynosi `r pvalue_wariancja`, więc odrzucamy hipotezę o stałości wariancji wartości resztowych.
 
 ## Założenie dotyczące niezależności
 
@@ -468,6 +456,20 @@ knitr::include_graphics("qqplot.pdf")
 ```
 
 
-
-
 # Wnioski -- podsumowanie
+
+W analizie skupiłyśmy się na próbie dobrania odpowiedniego modelu do opisania maksymalnej temperatury w Londynie na podstawie danych z lat 1979-2019.
+
+Ze względu na widoczny trend i sezonowość w danych przyjęłyśmy, że można je opisać modelem $Y_t = m(t) + s(t) + X_t$, gdzie $m(t)$ to wielomian stopnia 1, $s(t)$ to funkcja okresowa, a $\{X_t\}$ to szereg ARMA($p$, $q$).
+
+Do wyznaczenia współczynników funkcji $m(t)$ i $s(t)$ zastosowałyśmy metodę najmniejszych kwadratów i otrzymałyśmy, że $m(t) \approx `r round(line_fit[1], 6)` t + `r round(line_fit[2], 2)`$ i $s(t) \approx `r round(sin_fit[2], 2)`\sin \left( \frac{2\pi t}{`r round(sin_fit[1], 2)`} + `r round(sin_fit[3], 2)`\right)$.
+
+Do wyznaczenia optymalnych parametrów $p$ i $q$ wykorzystałyśmy kryterium informacyjne Akaikiego. Na jego podstawie przyjęłyśmy, że $p = 6$ i $q = 0$, czyli $X_t - \phi_1 X_{t-1} - \phi_2 X_{t-2} - \dots - \phi_6 X_{t-6} = Z_t$, gdzie $Z_t \sim WN(0, \sigma)$.
+
+Parametry $\phi_i$ i $\sigma$ wyestymowałyśmy metodą Yule-Walkera otrzymując $\phi_1 = 0.7031$, $\phi_2 = 0.0063$, $\phi_3 = -0.0023$, $\phi_4 = 0.0156$, $\phi_5 = 0.0181$, $\phi_6 = 0.0155$ oraz $\sigma = 2.3298$.
+
+Na podstawie stworzonych przedziałów ufności na poziomie ufności $0.05$ zaobserwowałyśmy, że dla dużych wartości $h$ wartości ACF dla badanego szeregu nie mieszą się w przedziale ufności.
+
+W analizie wartości resztowych pokazałyśmy, że możemy przyjąć, że residua mają średnią równą 0 i są niezależne, ale wariancja nie jest stała i nie mają one rozkładu normalnego, więc na tej podstawie wnioskujemy, że model nie został poprawnie dobrany do danych.
+
+
